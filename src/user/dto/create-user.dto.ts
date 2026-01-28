@@ -1,4 +1,10 @@
-import { IsDefined, IsEmail, IsString, MinLength } from 'class-validator';
+import {
+  IsDefined,
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 export class CreateUserDto {
   @Transform(({ value }: { value: unknown }) => {
@@ -7,9 +13,11 @@ export class CreateUserDto {
   })
   @IsDefined()
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @IsString()
+  @IsNotEmpty()
   @MinLength(8, {
     message: 'Password must be at least 8 characters',
   })
