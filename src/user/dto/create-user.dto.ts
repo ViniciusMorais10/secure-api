@@ -1,17 +1,6 @@
-import {
-  IsDefined,
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  MinLength,
-} from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+
 export class CreateUserDto {
-  @Transform(({ value }: { value: unknown }) => {
-    if (typeof value !== 'string') return '';
-    return value.trim().toLowerCase();
-  })
-  @IsDefined()
   @IsEmail()
   @IsNotEmpty()
   email: string;
