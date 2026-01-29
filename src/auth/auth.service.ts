@@ -21,7 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly refreshService: RefreshTokenService,
-  ) {}
+  ) { }
 
   async register(data: CreateUserDto) {
     const { email, password } = data;
@@ -46,6 +46,10 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.status) {
+      throw new UnauthorizedException('Account is inactive');
     }
 
     const passwordMatches = await argon2.verify(user.password, password);
@@ -131,7 +135,7 @@ export class AuthService {
     await this.refreshService.revoke(matchedSession.id);
 
     const user = await this.userService.findById(userId);
-    console.log(user);
+
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const accessPayload = { sub: user.id, email: user.email, role: user.role };

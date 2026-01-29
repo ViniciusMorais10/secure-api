@@ -61,3 +61,4 @@ checklist.md
 
 /generated/prisma
 /data
+data/postgres

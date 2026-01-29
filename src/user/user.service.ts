@@ -4,7 +4,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async findByEmailWithPassword(mail: string) {
     const normalizedEmail = this.normalizedEmail(mail);
