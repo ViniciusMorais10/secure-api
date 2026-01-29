@@ -4,6 +4,7 @@ import { CreateUserDto } from '../user/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -29,6 +30,7 @@ export class AuthController {
     status: 401,
     description: 'Invalid credentials',
   })
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('login')
   async login(@Body() data: LoginDto) {
     return await this.authService.login(data);
@@ -45,6 +47,7 @@ export class AuthController {
     status: 401,
     description: 'Invalid or revoked refresh token',
   })
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Post('refresh')
   async refresh(@Body() data: RefreshDto) {
     return await this.authService.refresh(data);
