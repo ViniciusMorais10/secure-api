@@ -7,10 +7,13 @@ import { ConfigService } from '@nestjs/config';
 import { RefreshTokenModule } from 'src/refresh-token/refresh-token.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+import { LoginAttemptModule } from './login-attempt/login-attempt.module';
+
 @Module({
   imports: [
     UserModule,
     RefreshTokenModule,
+    LoginAttemptModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

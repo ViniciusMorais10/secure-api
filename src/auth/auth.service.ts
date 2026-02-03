@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 
 import type { StringValue } from 'ms';
 import { RefreshDto } from './dto/refresh.dto';
+import { LoginAttemptService } from './login-attempt/login-attempt.service';
 
 export interface RefreshTokenPayload {
   sub: number;
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly refreshService: RefreshTokenService,
+    private readonly logingAttemptService: LoginAttemptService,
   ) {}
 
   async register(data: CreateUserDto) {
@@ -39,8 +41,11 @@ export class AuthService {
     };
   }
 
-  async login(data: LoginDto) {
-    const { email, password } = data;
+  async login(data: LoginDto, ip: string) {
+    const email = data.email.trim().toLowerCase();
+    const { password } = data;
+
+    await this.logingAttemptService.assertNotLocked(email, ip);
 
     const user = await this.userService.findByEmailWithPassword(email);
 
@@ -55,8 +60,11 @@ export class AuthService {
     const passwordMatches = await argon2.verify(user.password, password);
 
     if (!passwordMatches) {
+      await this.logingAttemptService.recordFailure(email, ip);
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    await this.logingAttemptService.reset(email, ip);
 
     const accessSecret = this.config.get<string>('JWT_ACCESS_SECRET');
     const accessExpiresIn =

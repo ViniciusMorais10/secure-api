@@ -1,10 +1,11 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -32,8 +33,9 @@ export class AuthController {
   })
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('login')
-  async login(@Body() data: LoginDto) {
-    return await this.authService.login(data);
+  async login(@Body() data: LoginDto, @Req() req: Request) {
+    const ip = req.ip ?? 'unknown';
+    return await this.authService.login(data, ip);
   }
 
   @ApiOperation({
