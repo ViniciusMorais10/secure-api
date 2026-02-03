@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import * as argon2 from 'argon2';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshTokenService } from '../refresh-token/refresh-token.service';
@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import type { StringValue } from 'ms';
 import { RefreshDto } from './dto/refresh.dto';
 import { LoginAttemptService } from './login-attempt/login-attempt.service';
+import { AuditLogService } from '../audit/audit-log.service';
 
 export interface RefreshTokenPayload {
   sub: number;
@@ -23,6 +24,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly refreshService: RefreshTokenService,
     private readonly logingAttemptService: LoginAttemptService,
+    private readonly audit: AuditLogService,
   ) {}
 
   async register(data: CreateUserDto) {
@@ -60,6 +62,13 @@ export class AuthService {
     const passwordMatches = await argon2.verify(user.password, password);
 
     if (!passwordMatches) {
+      await this.audit.create({
+        action: 'auth.login-failed',
+        actorEmail: email,
+        ip,
+        userAgent,
+      });
+
       await this.logingAttemptService.recordFailure(email, ip);
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -95,6 +104,13 @@ export class AuthService {
     const refreshExpiresAt = this.computeExpiresAt(refreshExpiresIn);
 
     await this.refreshService.create(user.id, refreshToken, refreshExpiresAt);
+
+    await this.audit.create({
+      action: 'auth.login-sucess',
+      actorEmail: email,
+      ip,
+      userAgent,
+    });
 
     return {
       accessToken,

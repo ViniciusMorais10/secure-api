@@ -2,18 +2,20 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
-import { UserModule } from 'src/user/user.module';
+import { UserModule } from '../user/user.module';
 import { ConfigService } from '@nestjs/config';
-import { RefreshTokenModule } from 'src/refresh-token/refresh-token.module';
+import { RefreshTokenModule } from '../refresh-token/refresh-token.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 import { LoginAttemptModule } from './login-attempt/login-attempt.module';
+import { AuditLogModule } from '../audit/audit-log.module';
 
 @Module({
   imports: [
     UserModule,
     RefreshTokenModule,
     LoginAttemptModule,
+    AuditLogModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
