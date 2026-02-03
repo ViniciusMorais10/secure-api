@@ -41,11 +41,11 @@ export class AuthService {
     };
   }
 
-  async login(data: LoginDto, ip: string) {
+  async login(data: LoginDto, ip: string, userAgent: string) {
     const email = data.email.trim().toLowerCase();
     const { password } = data;
 
-    await this.logingAttemptService.assertNotLocked(email, ip);
+    await this.logingAttemptService.assertNotLocked(email, ip, userAgent);
 
     const user = await this.userService.findByEmailWithPassword(email);
 

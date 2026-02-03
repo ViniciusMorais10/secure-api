@@ -35,7 +35,8 @@ export class AuthController {
   @Post('login')
   async login(@Body() data: LoginDto, @Req() req: Request) {
     const ip = req.ip ?? 'unknown';
-    return await this.authService.login(data, ip);
+    const userAgent = req.headers['user-agent'] ?? 'unknown';
+    return await this.authService.login(data, ip, userAgent);
   }
 
   @ApiOperation({

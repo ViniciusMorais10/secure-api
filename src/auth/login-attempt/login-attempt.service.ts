@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { AuditLogService } from '../../audit/audit-log.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 const WINDOW_MINUTES = 15;
 const MAX_ATTEMPTS = 5;
@@ -11,9 +12,16 @@ function addMinutes(date: Date, minutes: number) {
 
 @Injectable()
 export class LoginAttemptService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly audit: AuditLogService,
+  ) {}
 
-  async assertNotLocked(email: string, ip: string): Promise<void> {
+  async assertNotLocked(
+    email: string,
+    ip: string,
+    userAgent: string,
+  ): Promise<void> {
     const attempt = await this.prismaService.loginAttempt.findUnique({
       where: { email_ip: { email, ip } },
     });
@@ -23,6 +31,12 @@ export class LoginAttemptService {
     const now = new Date();
 
     if (attempt.lockedUntil > now) {
+      await this.audit.create({
+        action: 'auth.login-blocked',
+        actorEmail: email,
+        ip,
+        userAgent: userAgent ?? 'unknown',
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
