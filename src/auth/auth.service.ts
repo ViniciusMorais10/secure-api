@@ -21,7 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly refreshService: RefreshTokenService,
-  ) { }
+  ) {}
 
   async register(data: CreateUserDto) {
     const { email, password } = data;

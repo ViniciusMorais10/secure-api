@@ -13,7 +13,7 @@ function addMinutes(date: Date, minutes: number) {
 export class LoginAttemptService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async assertNoLocked(email: string, ip: string): Promise<void> {
+  async assertNotLocked(email: string, ip: string): Promise<void> {
     const attempt = await this.prismaService.loginAttempt.findUnique({
       where: { email_ip: { email, ip } },
     });
@@ -25,16 +25,24 @@ export class LoginAttemptService {
     if (attempt.lockedUntil > now) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    //keep state clean
+    await this.prismaService.loginAttempt.update({
+      where: { email_ip: { email, ip } },
+      data: {
+        lockedUntil: null,
+        count: 0,
+        firstAttemptAt: now,
+      },
+    });
   }
 
   async recordFailure(email: string, ip: string) {
+    const now = new Date();
+
     const attempt = await this.prismaService.loginAttempt.findUnique({
       where: { email_ip: { email, ip } },
     });
-
-    const windowExpired = attempt?.firstAttemptAt
-      ? addMinutes(attempt.firstAttemptAt, WINDOW_MINUTES) < new Date()
-      : false;
 
     if (!attempt) {
       await this.prismaService.loginAttempt.create({
@@ -42,28 +50,60 @@ export class LoginAttemptService {
           email,
           ip,
           count: 1,
-          firstAttemptAt: new Date(),
+          firstAttemptAt: now,
+          lockedUntil: null,
         },
       });
-    } else if (windowExpired) {
+      return;
+    }
+
+    if (attempt.lockedUntil && attempt.lockedUntil > now) {
+      return;
+    }
+
+    const windowEndsAt = addMinutes(attempt.firstAttemptAt, WINDOW_MINUTES);
+    const windowExpired = windowEndsAt < now;
+
+    if (windowExpired) {
       await this.prismaService.loginAttempt.update({
         where: { email_ip: { email, ip } },
         data: {
           count: 1,
-          firstAttemptAt: new Date(),
+          firstAttemptAt: now,
           lockedUntil: null,
         },
       });
-    } else {
-      await this.prismaService.loginAttempt.update({
-        where: { email_ip: { email, ip } },
-        data: {
-          count: attempt.count + 1,
-          firstAttemptAt: new Date(),
-        },
-      });
     }
+
+    const nextCount = attempt.count + 1;
+    const shoudLock = nextCount >= MAX_ATTEMPTS;
+
+    await this.prismaService.loginAttempt.update({
+      where: { email_ip: { email, ip } },
+      data: {
+        count: nextCount,
+        firstAttemptAt: attempt.firstAttemptAt,
+        lockedUntil: shoudLock ? addMinutes(now, LOCK_MINUTES) : null,
+      },
+    });
   }
 
-  async reset() {}
+  async reset(email: string, ip: string): Promise<void> {
+    const now = new Date();
+
+    const attempt = await this.prismaService.loginAttempt.findUnique({
+      where: { email_ip: { email, ip } },
+    });
+
+    if (!attempt) return;
+
+    await this.prismaService.loginAttempt.update({
+      where: { email_ip: { email, ip } },
+      data: {
+        count: 0,
+        firstAttemptAt: now,
+        lockedUntil: null,
+      },
+    });
+  }
 }
